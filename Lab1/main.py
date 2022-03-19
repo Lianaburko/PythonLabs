@@ -4,14 +4,14 @@ import lab1_task
 def main():
     print('Do you want to change K? Default is 4. If no, enter anything you want')
     k = input()
-    if k is digit:
+    if k.isdigit():
         k = int(k)
     else:
         k = 4    
 
     print('Do you want to change N? Default is 10. If no, enter anything you want')
     n = input()
-    if n is digit:
+    if n.isdigit():
         n = int(n)
     else: 
         n = 10
