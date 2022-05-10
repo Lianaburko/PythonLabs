@@ -1,8 +1,13 @@
+import types
+
 def deserialize_json(s):
 
     index = 0 
+    if s[index:index + 4] == 'None':
+        s = s[index + 4::]
+        return s, None
 
-    if s[index] in '-0123456789':
+    elif s[index] in '-0123456789':
         obj = ''
         check_float = False
         while s[index] != ',' and s[index] != '\n' and s[index] != ' ' and s[index] != ']' and s[index] != '}':
@@ -91,3 +96,66 @@ def list_deserialization(res): # res - current list,
 
     return result
 
+def fun_deserialization(obj):
+    code_object_args = get_code_object_args(obj['function_type']['__code__']['code_type'])
+    
+    code = types.CodeType(*code_object_args)
+    my_globals = obj['function_type']['__globals__']
+    name = obj['function_type']['__name__']
+
+    res = types.FunctionType(code, my_globals, name)
+    res.__globals__["__builtins__"] = __import__("builtins") # for functions suh print
+    res.__globals__.update({res.__name__: res}) # for recursion
+    
+    return res
+
+
+def get_code_object_args(obj):
+    result = (obj['co_argcount'],
+    obj['co_posonlyargcount'],
+    obj['co_kwonlyargcount'],
+    obj['co_nlocals'],
+    obj['co_stacksize'],
+    obj['co_flags'],
+    bytes(obj['co_code']),
+    tuple(obj['co_consts']),
+    tuple(obj['co_names']),
+    tuple(obj['co_varnames']),
+    obj['co_filename'],
+    obj['co_name'],
+    obj['co_firstlineno'],
+    bytes(obj['co_lnotab']))
+    obj['co_freevars'],
+    tuple(obj['co_cellvars']),
+
+    return result
+
+
+FUNCTION_ATTRIBUTES = [
+    "__code__",
+    "__name__",
+    "__defaults__",
+    "__closure__"
+]
+
+
+CODE_OBJECT_ARGS = [
+    'co_argcount',
+    'co_posonlyargcount',
+    'co_kwonlyargcount',
+    'co_nlocals',
+    'co_stacksize',
+    'co_flags',
+    'co_filename',
+    'co_name',
+    'co_firstlineno',
+    'co_freevars',
+#
+    'co_cellvars',
+    'co_consts',
+    'co_names',
+    'co_varnames',
+#
+    'co_code',
+    'co_lnotab'
+]
