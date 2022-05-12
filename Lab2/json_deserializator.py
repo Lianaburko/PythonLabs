@@ -25,6 +25,7 @@ def deserialize_json(s):
             res = int(obj)
         return s, res
     
+
     elif s[index] == '"':
         index += 1
         obj = ''
@@ -67,7 +68,13 @@ def deserialize_json(s):
             index += 1
         s = s[index::]   
         result = dict_deserialization(res)
-        return s, result
+
+        if isinstance(result, dict):
+            if 'class_type' in result.keys():
+                return class_deserialization(result)
+        if s != '':
+            return s, result
+        return result
 
 
 def dict_deserialization(res):
@@ -80,7 +87,14 @@ def dict_deserialization(res):
             res, key = deserialize_json(res)
             res = res[1:]
             res, value = deserialize_json(res)
+            if value == 432:
+                continue
             result[key] = value
+    
+    if 'function_type' in result.keys():
+        my_fun = fun_deserialization(result)
+
+        return my_fun
 
     return result
 
@@ -101,13 +115,27 @@ def fun_deserialization(obj):
     
     code = types.CodeType(*code_object_args)
     my_globals = obj['function_type']['__globals__']
+    
     name = obj['function_type']['__name__']
 
     res = types.FunctionType(code, my_globals, name)
+    for key, value in my_globals.items():
+        try:
+            res.__globals__[key] = __import__(value)
+        except:
+            pass
+
     res.__globals__["__builtins__"] = __import__("builtins") # for functions suh print
     res.__globals__.update({res.__name__: res}) # for recursion
     
     return res
+
+
+def class_deserialization(obj):
+    name = obj["class_type"]["__name__"]
+    my_obj = obj["class_type"]["__attributes__"]
+    my_bases = (tuple(obj["class_type"]["__bases__"]))
+    return type(name, my_bases, my_obj) 
 
 
 def get_code_object_args(obj):
@@ -131,31 +159,3 @@ def get_code_object_args(obj):
     return result
 
 
-FUNCTION_ATTRIBUTES = [
-    "__code__",
-    "__name__",
-    "__defaults__",
-    "__closure__"
-]
-
-
-CODE_OBJECT_ARGS = [
-    'co_argcount',
-    'co_posonlyargcount',
-    'co_kwonlyargcount',
-    'co_nlocals',
-    'co_stacksize',
-    'co_flags',
-    'co_filename',
-    'co_name',
-    'co_firstlineno',
-    'co_freevars',
-#
-    'co_cellvars',
-    'co_consts',
-    'co_names',
-    'co_varnames',
-#
-    'co_code',
-    'co_lnotab'
-]

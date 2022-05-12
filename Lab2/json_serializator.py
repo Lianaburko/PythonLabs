@@ -1,5 +1,5 @@
 import types
-from inspect import isfunction
+from inspect import isclass, isfunction
 
 
 def serialize_json(obj, indent, current_intent):
@@ -13,15 +13,19 @@ def serialize_json(obj, indent, current_intent):
         new_str = '"' + str(obj) + '"'
         return new_str
     
-    elif isinstance(obj, (list,tuple)):
+    elif isinstance(obj, (list,tuple,bytes)):
         return list_serialization(obj, indent, current_intent)
 
     elif isinstance(obj, dict):
         return dict_serialization(obj, indent, current_intent)
     
     elif isfunction(obj):
-        return fun_serialization(obj)
+        return fun_serialization(obj, indent, current_intent)
 
+    elif isclass(obj):
+        return class_serialization(obj, indent, current_intent)
+
+    return "432"
 
 def list_serialization(obj, indent, current_indent = 0):
 
@@ -84,14 +88,14 @@ def get_globals(fun):
     return result
 
 
-def fun_serialization(fun):
+def fun_serialization(fun, indent, current_indent):
     globals = get_globals(fun)
     result = {
         "function_type": {
             "__globals__": globals,
             "__name__": fun.__name__,
             "__code__": {
-                "code_type":{
+                "code_type": {
                     'co_argcount':fun.__code__.co_argcount,
                     'co_posonlyargcount':fun.__code__.co_posonlyargcount,
                     'co_kwonlyargcount':fun.__code__.co_kwonlyargcount,
@@ -113,38 +117,30 @@ def fun_serialization(fun):
             }
         }
     }
-    res = dict_serialization(result,4,0)
+    res = dict_serialization(result, indent, current_indent)
     return res
 
 
+def class_serialization(cls, indent, current_indent):
+    cls_dir = dir(cls)
+    cls_dir.remove("__class__")
+    cls_dir.remove("__getattribute__")
+    cls_dir.remove("__new__")
+    cls_dir.remove("__setattr__")
 
-FUNCTION_ATTRIBUTES = [
-    "__code__",
-    "__name__",
-    "__defaults__",
-    "__closure__"
-]
+    result = {
+        "class_type":{
+            "__attributes__":{},
+            "__name__": cls.__name__,
+            "__bases__": [class_serialization(base, indent, current_indent) for base in cls.__bases__ if base != object]
+        }
+    }
 
-CODE_OBJECT_ARGS = [
-    'co_argcount',
-    'co_posonlyargcount',
-    'co_kwonlyargcount',
-    'co_nlocals',
-    'co_stacksize',
-    'co_flags',
-    'co_filenames',
-    'co_names',
-    'co_firstlineno',
-    'co_freevars',
-    'co_cellvars',
-    'co_consts',
-    'co_varnames',
-    'co_name',
-#
-    'co_code',
-    'co_lnotab'
-]
+    for i in cls_dir:
+        result["class_type"]["__attributes__"][i] = getattr(cls, i)
+    
+    res = dict_serialization(result, indent, current_indent)   
 
-
+    return res
 
 
